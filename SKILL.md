@@ -9,11 +9,11 @@ user_invocable: true
 iPhone等のScaniverseで撮った3Dスキャン(USDZ)を、寸法=点群実測の正確な平面図に起こすパイプライン。扇町2号で1F/2F両方を完成・確立した手順。事実ベースのみ(推定要素は載せない)。
 
 ## 前提
-- スクリプト一式: `~/projects/claude-code/ogimachi-floorplan/`
+- スクリプト一式: `~/.claude/skills/scan-to-floorplan/scripts/`
 - Blender 5.x: `/Applications/Blender.app/Contents/MacOS/Blender`
 - 図面は必ず**Readツールでチャット内に直接表示**して見せる(プレビューペインは画像非表示)
 - 完成図は `output/<物件名>/` に物件別収納
-- 関連記憶: usdz-floorplan-pipeline / editor-json-save-pitfall / ogimachi-floorplan-project
+- 関連記憶: usdz-floorplan-pipeline / editor-json-save-pitfall
 
 ## ワークフロー(8ステップ)
 以下は1フロアあたり。1F/2Fは別ファイルで撮影してもらう。
@@ -21,7 +21,7 @@ iPhone等のScaniverseで撮った3Dスキャン(USDZ)を、寸法=点群実測�
 ### ① USDZ → GLB 変換
 ScaniverseでUSDZ書き出し(成合町・扇町で実証済みの形式)。`~/Downloads/`等から拾う。
 ```
-Blender --background --python convert_usdz_glb.py -- <in.usdz> glb/<物件>_1f.glb
+Blender --background --python convert_usdz_glb.py -- <in.usdz> glb/<物件名>_1f.glb
 ```
 `export_yup=False`でZ-up維持。旧データは`glb/_old_*/`へ退避。
 
@@ -33,8 +33,9 @@ Blender --background --python convert_usdz_glb.py -- <in.usdz> glb/<物件>_1f.g
 4. **東西/南北反転**: 下から撮影だと鏡像。両軸反転+PIL `FLIP_LEFT_RIGHT`で調整。扇町は両階とも反転要
 
 ### ③ 下敷き生成 + 間取りエディター
-`build_ogimachi_editor.py`が「下敷き画像→確定座標をrooms.json→エディタHTML」を一括生成。
-- 階別パラメータ: `ROTATE_DEG`(ヨー度) / `FLIP_LR`(東西ミラー) / `SLICE`(高さ帯, Noneで全点)
+`build_property_editor.py`が「下敷き画像→エディタHTML」を一括生成。
+- 引数: `<glb_path> <floor_name> [rotate_deg] [flip_lr] [slice_low] [slice_high]`
+- パラメータ: 回転角(ヨー度) / 東西ミラー(true/false) / 高さスライス帯(省略で全点)
 - **下敷き描画の使い分け**: 良質で壁が明瞭→腰高スライス(0.9-1.3m)+点描 / 壁が薄い・南側が低い→`SLICE=None`で全点+点密度ヒートマップ(壁は床〜天井まで垂直に積もる=高密度を黒く)
 - 点サイズ`s=4`・濃いめ・dpi180で視認性確保
 

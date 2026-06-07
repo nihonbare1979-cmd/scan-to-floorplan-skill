@@ -77,7 +77,7 @@ def through_posts(rooms1, rooms2, tol=0.22):
     return [(x, y) for (x, y, _n) in cluster(cand, 0.25)]
 
 
-def draw_overlay(d1, d2, out_path, title="成合町3号"):
+def draw_overlay(d1, d2, out_path, title="物件"):
     BW, BH = d1["bldg_w"], d1["bldg_h"]
     fig, ax = plt.subplots(figsize=(9, 9 * BH / BW))
     # 1F 壁(黒)
@@ -132,7 +132,7 @@ def rank_posts(posts, v, r=0.22):
     return out
 
 
-def draw_ranked(d1, d2, ranked, out_path):
+def draw_ranked(d1, d2, ranked, out_path, title="物件"):
     BW, BH = d1["bldg_w"], d1["bldg_h"]
     fig, ax = plt.subplots(figsize=(9, 9 * BH / BW))
     for (a, b) in edges(d1["rooms"]):
@@ -153,7 +153,7 @@ def draw_ranked(d1, d2, ranked, out_path):
                    s=90, label=f"{rk} {lab}（{cnt[rk]}）")
     ax.legend(prop=FP, loc="upper left", fontsize=9)
     ax.set_xlim(-0.4, BW + 0.4); ax.set_ylim(BH + 0.4, -0.4); ax.set_aspect("equal")
-    ax.set_title("成合町3号 通し柱候補ランク（点群の垂直連続で判定・要現場確認）",
+    ax.set_title(f"{title} 通し柱候補ランク（点群の垂直連続で判定・要現場確認）",
                  fontproperties=FP, fontsize=13)
     ax.set_xticks(range(0, 10)); ax.set_yticks(range(0, 10)); ax.grid(True, color="#eee", lw=0.5)
     fig.tight_layout(); fig.savefig(out_path, dpi=140, facecolor="white")
@@ -161,7 +161,7 @@ def draw_ranked(d1, d2, ranked, out_path):
     print(f"  保存: {out_path}  ◎{cnt['◎']} ○{cnt['○']} △{cnt['△']} ?{cnt['?']}")
 
 
-def load_aligned_cloud(glb="glb/narukami_3.glb", bw=9.04):
+def load_aligned_cloud(glb, bw):
     """点群を平面図と同じ建物座標(原点NW・東西反転・床=0)に変換して返す。"""
     from load_glb import load_points
     from extract_elevation import normalize_floor
@@ -173,7 +173,7 @@ def load_aligned_cloud(glb="glb/narukami_3.glb", bw=9.04):
     return v, c
 
 
-def draw_section(d1, posts, out_path, glb="glb/narukami_3.glb"):
+def draw_section(d1, posts, out_path, glb, title="物件"):
     """統合立面図(南から見た断面): 1F+2Fを縦に積んだ実測断面。
     床=0 / 1F天井≒2.35 / 2F天井≒5.2。通し柱候補のX位置を縦ガイドで示す。"""
     v, c = load_aligned_cloud(glb, d1["bldg_w"])
@@ -194,7 +194,7 @@ def draw_section(d1, posts, out_path, glb="glb/narukami_3.glb"):
     ax.set_aspect("equal")
     ax.set_xlabel("東西方向 (m)", fontproperties=FP)
     ax.set_ylabel("高さ (m)", fontproperties=FP)
-    ax.set_title("成合町3号 統合立面図(南から見た断面・1F+2F)　※高さ=実測・叩き台",
+    ax.set_title(f"{title} 統合立面図(南から見た断面・1F+2F)　※高さ=実測・叩き台",
                  fontproperties=FP, fontsize=13)
     fig.tight_layout(); fig.savefig(out_path, dpi=140, facecolor="white")
     plt.close(fig)
@@ -205,12 +205,15 @@ if __name__ == "__main__":
     import os
     import sys
     a = sys.argv
-    # 引数: [1f.json] [2f.json] [out_prefix] [title] [glb]  省略時は成合町
-    d1f = a[1] if len(a) > 1 else "narukami_rooms.json"
-    d2f = a[2] if len(a) > 2 else "narukami_2f_rooms.json"
-    prefix = a[3] if len(a) > 3 else "narukami"
-    title = a[4] if len(a) > 4 else "成合町3号"
-    glb = a[5] if len(a) > 5 else ("glb/narukami_3.glb" if len(a) <= 3 else None)
+    # 引数: <1f.json> <2f.json> <out_prefix> [title] [glb]
+    if len(a) < 4:
+        print("使い方: python3 structural_draft.py <1f.json> <2f.json> <out_prefix> [title] [glb]")
+        sys.exit(1)
+    d1f = a[1]
+    d2f = a[2]
+    prefix = a[3]
+    title = a[4] if len(a) > 4 else "物件"
+    glb = a[5] if len(a) > 5 else None
 
     d1 = json.loads(open(d1f).read())
     d2 = json.loads(open(d2f).read())
@@ -225,7 +228,7 @@ if __name__ == "__main__":
     # 統合立面図(断面)は1F+2F連続点群が要る。glb指定があれば実行
     if glb and os.path.exists(glb):
         try:
-            draw_section(d1, posts, f"output/{prefix}_section.jpg", glb)
+            draw_section(d1, posts, f"output/{prefix}_section.jpg", glb, title)
         except Exception as e:
             print("断面図スキップ:", e)
     else:

@@ -8,9 +8,9 @@
 |---|------|-----------|
 | ① | USDZ→GLB変換 | `convert_usdz_glb.py` |
 | ② | 姿勢診断（真上ビュー特定・補正） | 目視＋下記ロジック |
-| ③ | 下敷き生成＋間取りエディター | `build_ogimachi_editor.py` → `build_editor.py` |
+| ③ | 下敷き生成＋間取りエディター | `build_property_editor.py` → `build_editor.py` |
 | ④ | ブラウザで部屋トレース・保存 | （エディターHTML） |
-| ⑤ | 平面図の清書 | `generate_narukami.py` → `draw_plan.py` |
+| ⑤ | 平面図の清書 | `generate_floorplan.py` → `draw_plan.py` |
 | ⑥ | 1F×2F整合 | `build_align_editor.py` |
 | ⑦ | 微ズレ整列 | `snap_rooms.py` |
 | ⑧ | 通し柱候補 | `structural_draft.py` |
@@ -21,7 +21,7 @@
 
 ```bash
 /Applications/Blender.app/Contents/MacOS/Blender --background \
-  --python scripts/convert_usdz_glb.py -- <入力.usdz> glb/<物件>_1f.glb
+  --python scripts/convert_usdz_glb.py -- <入力.usdz> glb/<物件名>_1f.glb
 ```
 
 ポイント：`export_yup=False` で **Z-up を維持**（下流の `load_glb.py` がZ-up前提）。
@@ -33,18 +33,20 @@
 3Dスキャンは **横倒し・傾き・上下逆**で取り込まれることがあります。必ず診断してください。
 
 1. **3方向の正投影**（生XY / 生XZ / 生YZ）を個別に高解像度で描き、目で見て「どの面が真上ビュー（間取りに見える面）か」を特定。
-   - 例：扇町1Fは素直にZ-up、2Fは床が **88度倒れて** 取り込まれていた。
+   - 例：あるフロアは素直にZ-up、別フロアは床が **88度倒れて** 取り込まれていた。
 2. **床が倒れている場合のみ** RANSACで床平面を検出して水平化（床法線→Z）。床と壁が同程度の大きさだと乱数で誤検出するため、**目視を優先**。
 3. **ヨー（水平面内の傾き）**：占有マップ（2Dヒストグラム）を −15〜15度回転させ、行・列方向の投影分散が最大になる角度を探す。
-   - 例：扇町1F = −10.5度、2F = 5.1度。
-4. **東西/南北の反転**：下から撮影だと鏡像になる。両軸反転＋PIL `FLIP_LEFT_RIGHT` で調整。扇町は両階とも反転が必要だった。
+   - 例：1F = −10.5度、2F = 5.1度といった値になる。
+4. **東西/南北の反転**：下から撮影だと鏡像になる。両軸反転＋PIL `FLIP_LEFT_RIGHT` で調整。下から撮ったフロアは反転が必要。
 
-これらの補正値は `build_ogimachi_editor.py` の先頭の辞書で設定します：
+これらの補正値は `build_property_editor.py` のコマンドライン引数で渡します：
 
-```python
-ROTATE_DEG = {"1f": -10.5, "2f": 5.1}   # ヨー補正（度）
-FLIP_LR    = {"1f": True,  "2f": True}  # 東西ミラー
-SLICE      = {"1f": (0.9, 1.3), "2f": None}  # 高さ帯。Noneで全点（密度描画）
+```bash
+# <glb_path> <floor_name> [rotate_deg] [flip_lr] [slice_low] [slice_high]
+# 例) 1階・ヨー-10.5度・東西反転・腰高スライス0.9〜1.3m
+python3 scripts/build_property_editor.py glb/property_1f.glb 1f -10.5 true 0.9 1.3
+# 例) 2階・ヨー5.1度・東西反転・全点投影（スライス引数を省略）
+python3 scripts/build_property_editor.py glb/property_2f.glb 2f 5.1 true
 ```
 
 自分の物件では、まず仮の値で下敷きを出し、画像を見ながら数値を詰めます。
@@ -53,8 +55,8 @@ SLICE      = {"1f": (0.9, 1.3), "2f": None}  # 高さ帯。Noneで全点（密�
 
 ## ③ 下敷き描画の使い分け
 
-- **壁が明瞭な良質スキャン** → 腰高スライス（0.9〜1.3m）＋点描（`SLICE=(0.9,1.3)`）
-- **壁が薄い／南側が低い** → 全点＋**点密度ヒートマップ**（`SLICE=None`）。壁は床から天井まで点が垂直に積もるため、密度が高い箇所を黒く描くと壁線が浮かぶ。
+- **壁が明瞭な良質スキャン** → 腰高スライス（引数で `0.9 1.3` を指定）＋点描
+- **壁が薄い／低い** → 全点＋**点密度ヒートマップ**（スライス引数を省略）。壁は床から天井まで点が垂直に積もるため、密度が高い箇所を黒く描くと壁線が浮かぶ。
 
 ---
 
@@ -103,8 +105,8 @@ python3 scripts/structural_draft.py <1f.json> <2f_aligned.json> "<物件名>/<�
 
 | 症状 | 対処 |
 |------|------|
-| 下敷きが真っ白 | スキャン品質不足。`SLICE=None`で全点密度描画を試す。それでも薄ければ撮り直し |
-| 図面が斜め | ②のヨー補正値（`ROTATE_DEG`）を調整 |
-| 東西/南北が逆 | `FLIP_LR` を切り替え |
+| 下敷きが真っ白 | スキャン品質不足。スライス引数を省略して全点密度描画を試す。それでも薄ければ撮り直し |
+| 図面が斜め | ②のヨー補正値（`rotate_deg` 引数）を調整 |
+| 東西/南北が逆 | `flip_lr` 引数を切り替え |
 | 高さ範囲が階高より大幅に広い | 姿勢が崩れているサイン。3面投影で真上を再特定 |
 | 「南側が欠損」に見える | 腰高スライスの問題のことも。全点XY範囲が建物実寸に合えば点群は揃っている |

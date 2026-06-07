@@ -1,5 +1,5 @@
 """
-USDZ → GLB 変換 (Blenderヘッドレス)。成合町と同一設定。
+USDZ → GLB 変換 (Blenderヘッドレス)。
   Blender --background --python convert_usdz_glb.py -- <入力.usdz> <出力.glb>
 ポイント: export_yup=False で Z-up を維持(下流のload_glbがZ-up前提)。
 """

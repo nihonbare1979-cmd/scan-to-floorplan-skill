@@ -17,6 +17,7 @@
   editor_<stem>.html   ← Chromeで開いて点群に合わせて間取りをトレース
 """
 import base64
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -107,16 +108,35 @@ def make_bg(glb_path, floor_name, rotate_deg=0.0, flip_lr=False, slice_range=(0.
 
     b64_path = MID / f"{stem}_bg.b64"
     b64_path.write_text(base64.b64encode(png.read_bytes()).decode())
-    print(f"下敷き生成: {png}")
-    return str(b64_path), stem
+    print(f"下敷き生成: {png}  (建物bbox {x1 - x0:.2f}×{y1 - y0:.2f}m)")
+    return str(b64_path), stem, x1 - x0, y1 - y0
+
+
+def make_starter_rooms(stem, floor_name, bw, bh):
+    """エディター用の初期JSON(部屋ゼロ・建物寸法のみ)を生成。
+    既存の編集済みJSONがあれば保護して上書きしない。"""
+    p = BASE / f"{stem}_rooms.json"
+    if p.exists():
+        print(f"既存 {p.name} を保持(初期化したい場合は削除して再実行)")
+        return p.name
+    data = {
+        "title": f"{floor_name.upper()} 平面図",
+        "bldg_w": round(bw, 2),
+        "bldg_h": round(bh, 2),
+        "x_dims": [0, round(bw, 2)],
+        "y_dims": [0, round(bh, 2)],
+        "rooms": [],
+    }
+    p.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+    return p.name
 
 
 def main():
     glb_path, floor_name, rotate_deg, flip_lr, slice_range = parse_args()
-    b64_path, stem = make_bg(glb_path, floor_name, rotate_deg, flip_lr, slice_range)
+    b64_path, stem, bw, bh = make_bg(glb_path, floor_name, rotate_deg, flip_lr, slice_range)
+    init_json = make_starter_rooms(stem, floor_name, bw, bh)
 
     out_html = f"editor_{stem}.html"
-    init_json = f"{stem}_rooms.json"
     subprocess.run(
         ["python3", "build_editor.py", init_json, b64_path, out_html],
         cwd=BASE, check=True)

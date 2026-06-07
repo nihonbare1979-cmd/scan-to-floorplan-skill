@@ -1,6 +1,6 @@
 # /scan-to-floorplan — Claude Code スキル
 
-iPhone等の **3Dスキャン（Scaniverse の USDZ）から、寸法＝実測の正確な平面図・1F×2F整合図・通し柱候補まで**を一気通貫で作る Claude Code スキルです。香川県のボロ戸建「扇町2号」（築57年・2階建）で1F/2F両方を完成させた実例ベースで作られています。
+iPhone等の **3Dスキャン（Scaniverse の USDZ）から、寸法＝実測の正確な平面図・1F×2F整合図・通し柱候補まで**を一気通貫で作る Claude Code スキルです。築古の木造2階建てで1F/2F両方を完成させた実例ベースで作られています。
 
 > 「業者に頼むと数万円の図面を、自分のスキャンから無料で起こしたい」——そんな空き家再生・DIYリフォーム・民泊検討の入口に使えます。
 
@@ -66,12 +66,12 @@ scan-to-floorplan/
 ├── requirements.txt              ← Python依存ライブラリ
 ├── scripts/
 │   ├── convert_usdz_glb.py       ← USDZ→GLB変換（Blenderヘッドレス）
-│   ├── build_ogimachi_editor.py  ← 下敷き生成＋間取りエディター生成
+│   ├── build_property_editor.py  ← 下敷き生成＋間取りエディター生成
 │   ├── build_editor.py           ← 間取りエディター本体（上記から呼ばれる）
 │   ├── build_align_editor.py     ← 1F×2F整合エディター（点群連動・undo・部屋追加）
 │   ├── snap_rooms.py             ← 部屋の辺を壁線に吸着（微ズレ整列）
 │   ├── structural_draft.py       ← 通し柱候補の抽出・重ね図
-│   ├── generate_narukami.py      ← 平面図の清書
+│   ├── generate_floorplan.py     ← 平面図の清書
 │   ├── draw_plan.py              ← 清書の描画エンジン
 │   ├── load_glb.py               ← GLB点群の読み込み
 │   ├── rooms_verified.py         ← 初期部屋配置のサンプル（自分の物件用に上書き）
@@ -82,9 +82,9 @@ scan-to-floorplan/
 
 ---
 
-## サンプルデータについて（重要）
+## 自分の物件で使うには
 
-`scripts/rooms_verified.py` と各スクリプトの `ogimachi_*` というファイル名・座標は、**開発に使った扇町2号のサンプル値**です。自分の物件で使うときは、ブラウザの間取りエディターで実際の点群に合わせて作り直す形になります（個人を特定する情報は含まれていません）。
+このスキルは**スキャンデータを渡せば、その物件の図面を起こす**汎用ツールです。特定の物件データは含まれていません。`scripts/build_property_editor.py` にあなたの GLB を渡すと、その点群から下敷きと間取りエディターが生成され、ブラウザで部屋を配置していく流れになります。`scripts/rooms_verified.py` は手動確定した座標を保存しておくための空テンプレートです。
 
 ---
 

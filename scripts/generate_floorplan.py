@@ -1,6 +1,6 @@
 """
-成合町3号 平面図ジェネレータ
-  python3 generate_narukami.py <rooms.json> [出力先.jpg]
+平面図ジェネレータ(rooms.json → 寸法入り平面図JPG)
+  python3 generate_floorplan.py <rooms.json> [出力先.jpg]
 出力先を省略するとタイトルから自動命名。
 """
 import json
@@ -37,11 +37,11 @@ def render(data, out_path):
     draw_plan(rooms, data["bldg_w"], data["bldg_h"],
               data.get("title", "平面図") + "（寸法=実測）", out_path,
               x_dims_top=data.get("x_dims"), y_dims_left=data.get("y_dims"),
-              note="麻里子さん確認＋3Dスキャン実測")
+              note="3Dスキャン実測ベース")
 
 
 if __name__ == "__main__":
-    src = sys.argv[1] if len(sys.argv) > 1 else "narukami_rooms.json"
+    src = sys.argv[1] if len(sys.argv) > 1 else "rooms.json"
     data = json.loads(Path(src).read_text())
     if len(sys.argv) > 2:
         out = sys.argv[2]

@@ -9,13 +9,13 @@ import sys
 from pathlib import Path
 
 BASE = Path(__file__).parent
-# 引数: [1f.json] [2f.json] [2f_bg.b64] [out.html] [dl_name] [title]  省略時は成合町
-d1_path = sys.argv[1] if len(sys.argv) > 1 else "narukami_rooms.json"
-d2_path = sys.argv[2] if len(sys.argv) > 2 else "narukami_2f_rooms.json"
-bg_path = sys.argv[3] if len(sys.argv) > 3 else "intermediate/narukami_2f_bg.b64"
+# 引数: [1f.json] [2f.json] [2f_bg.b64] [out.html] [dl_name] [title]
+d1_path = sys.argv[1] if len(sys.argv) > 1 else "1f_rooms.json"
+d2_path = sys.argv[2] if len(sys.argv) > 2 else "2f_rooms.json"
+bg_path = sys.argv[3] if len(sys.argv) > 3 else "intermediate/2f_bg.b64"
 out_html = sys.argv[4] if len(sys.argv) > 4 else "editor_align.html"
 dl_name = sys.argv[5] if len(sys.argv) > 5 else Path(d2_path).name
-title = sys.argv[6] if len(sys.argv) > 6 else "成合町3号"
+title = sys.argv[6] if len(sys.argv) > 6 else "物件"
 d1 = json.loads((BASE / d1_path).read_text())      # 1F(土台)
 d2 = json.loads((BASE / d2_path).read_text())       # 2F(可動)
 bg = (BASE / bg_path).read_text().strip()
@@ -89,7 +89,7 @@ HTML = r"""<!DOCTYPE html>
   </div>
  </div>
  <button class="primary" onclick="save()" style="width:100%">💾 2階を保存</button>
- <p class="hint">合わせ終わったら保存 → <b>narukami_2f_rooms.json</b> がDLされます。「保存した」と伝えてください。</p>
+ <p class="hint">合わせ終わったら保存 → <b>2階の整合JSON</b> がDLされます。「保存した」と伝えてください。</p>
  <textarea id="json" readonly></textarea>
 </div>
 <script>

@@ -1,24 +1,34 @@
 """
 間取りエディタ(editor.html)を生成する。
-narukami_rooms.json と 下敷きbase64 を埋め込み、単体で開けるHTMLにする。
-  python3 build_editor.py
+rooms.json と 下敷きbase64 を埋め込み、単体で開けるHTMLにする。
+通常は build_property_editor.py から呼ばれる。
+  python3 build_editor.py <rooms.json> <bg.b64> <out.html>
+rooms.json が無い場合は空の間取り(部屋ゼロ)から始める。
 """
 import json
 import sys
 from pathlib import Path
 
 BASE = Path(__file__).parent
-# 引数: [rooms.json] [bg.b64] [out.html]  省略時は1F
-rooms_path = sys.argv[1] if len(sys.argv) > 1 else "narukami_rooms.json"
-bg_path = sys.argv[2] if len(sys.argv) > 2 else "intermediate/narukami_bg.b64"
+# 引数: [rooms.json] [bg.b64] [out.html]
+rooms_path = sys.argv[1] if len(sys.argv) > 1 else "rooms.json"
+bg_path = sys.argv[2] if len(sys.argv) > 2 else "intermediate/bg.b64"
 out_html = sys.argv[3] if len(sys.argv) > 3 else "editor.html"
-data = json.loads((BASE / rooms_path).read_text())
-bg = (BASE / bg_path).read_text().strip()
+
 DL_NAME = Path(rooms_path).name
+rp = BASE / rooms_path
+if rp.exists():
+    data = json.loads(rp.read_text())
+else:
+    # 初期JSONが無ければ空の間取りから開始(ユーザーがブラウザで部屋を追加)
+    data = {"title": "間取りエディタ", "bldg_w": 10.0, "bldg_h": 10.0,
+            "x_dims": [0, 10.0], "y_dims": [0, 10.0], "rooms": []}
+TITLE = data.get("title", "間取りエディタ")
+bg = (BASE / bg_path).read_text().strip()
 
 HTML = r"""<!DOCTYPE html>
 <html lang="ja"><head><meta charset="utf-8">
-<title>成合町3号 間取りエディタ</title>
+<title>__TITLE__ 間取りエディタ</title>
 <style>
  body{font-family:"Hiragino Kaku Gothic ProN",sans-serif;margin:0;display:flex;background:#f4f3ef}
  #left{flex:1;padding:12px}
@@ -48,7 +58,7 @@ HTML = r"""<!DOCTYPE html>
  点群(下敷き)の壁に合わせて配置してください。スナップONで近い壁・0.05m単位に吸着します。</p>
 </div>
 <div id="panel">
- <h2>成合町3号 間取りエディタ</h2>
+ <h2>__TITLE__ 間取りエディタ</h2>
  <label>部屋名</label><input id="f_name" oninput="applyField()">
  <label>種別(色)</label>
  <select id="f_type" onchange="applyField()">
@@ -67,7 +77,7 @@ HTML = r"""<!DOCTYPE html>
  <p id="info" class="hint"></p>
  <hr>
  <button class="primary" onclick="save()">💾 保存(JSONダウンロード)</button>
- <p class="hint">保存すると <b>narukami_rooms.json</b> がダウンロードされます。<br>
+ <p class="hint">保存すると <b>__DLNAME__</b> がダウンロードされます。<br>
  「ダウンロードに保存した」と伝えてくれれば、こちらで清書します。</p>
  <textarea id="json" readonly></textarea>
 </div>
@@ -166,7 +176,8 @@ draw();
 </script></body></html>"""
 
 html = (HTML.replace("__DATA__", json.dumps(data, ensure_ascii=False))
-            .replace("__BG__", bg).replace("__DLNAME__", DL_NAME))
+            .replace("__BG__", bg).replace("__DLNAME__", DL_NAME)
+            .replace("__TITLE__", TITLE))
 out = BASE / out_html
 out.write_text(html)
 print("生成:", out, f"({len(html)//1024} KB)")

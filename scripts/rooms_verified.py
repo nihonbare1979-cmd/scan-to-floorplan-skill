@@ -13,7 +13,7 @@ Y軸: 南方向 (+)
 --- 使い方 ---
 1. ブラウザエディターで部屋ブロックを点群に合わせて配置し、💾保存
 2. 保存された rooms.json の値をここに転記
-3. generate_narukami.py に渡して清書図を再生成
+3. generate_floorplan.py に渡して清書図を再生成
 
 --- VERIFIED の構造 ---
 VERIFIED = {

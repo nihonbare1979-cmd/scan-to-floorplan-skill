@@ -4,3 +4,8 @@ intermediate/
 __pycache__/
 *.pyc
 .DS_Store
+
+# 物件固有(公開しない)
+editor_*.html
+*_rooms.json
+through_transform.json

@@ -64,7 +64,7 @@ HTML = r"""<!DOCTYPE html>
  <select id="f_type" onchange="applyField()">
   <option>和室</option><option>洋室</option><option>水回り</option><option>玄関</option>
   <option>廊下</option><option>収納</option><option>床の間</option><option>縁側</option>
-  <option>屋外</option><option>未定</option>
+  <option>出窓</option><option>屋外</option><option>未定</option>
  </select>
  <div class="row">
   <div><label>X(m)</label><input id="f_x" type="number" step="0.01" oninput="applyField()"></div>
@@ -85,7 +85,7 @@ HTML = r"""<!DOCTYPE html>
 const DATA = __DATA__;
 const BG = "data:image/png;base64,__BG__";
 const COL = {和室:'#fff5dc',洋室:'#e8e0f0',水回り:'#d7ebf0',玄関:'#faf0d7',
- 廊下:'#f2f2e8',収納:'#e4d8c8',床の間:'#fce8d0',縁側:'#ece4ce',屋外:'#f5f5f5',未定:'#e1e1e1'};
+ 廊下:'#f2f2e8',収納:'#e4d8c8',床の間:'#fce8d0',縁側:'#ece4ce',出窓:'#cfe6c8',屋外:'#f5f5f5',未定:'#e1e1e1'};
 const TATAMI=1.62, SCALE=70, MARGIN=40;
 let rooms=DATA.rooms.map(r=>({...r})), sel=-1, snap=true, showBg=true;
 let drag=null;

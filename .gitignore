@@ -10,3 +10,6 @@ editor_*.html
 *_rooms.json
 through_transform.json
 shared_frame.json
+index.html
+gallery.html
+*.b64

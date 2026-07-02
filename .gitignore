@@ -13,3 +13,6 @@ shared_frame.json
 index.html
 gallery.html
 *.b64
+
+# 物件プロジェクト一式(公開しない)
+scripts/projects/

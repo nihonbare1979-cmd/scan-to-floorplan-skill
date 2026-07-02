@@ -38,6 +38,7 @@ def render(data, out_path):
     draw_plan(rooms, data["bldg_w"], data["bldg_h"],
               data.get("title", "平面図") + "（寸法=実測）", out_path,
               x_dims_top=data.get("x_dims"), y_dims_left=data.get("y_dims"),
+              openings=data.get("openings"),
               note="3Dスキャン実測ベース")
 
 

@@ -26,9 +26,15 @@ FP = font_manager.FontProperties(fname="/System/Library/Fonts/ヒラギノ角ゴ
 BASE = Path(__file__).parent
 
 
+def _find(name):
+    """設定JSONを カレント(=物件プロジェクトフォルダ) → scripts/ の順で探す。"""
+    p = Path.cwd() / name
+    return p if p.exists() else BASE / name
+
+
 def registered_cloud(glb):
     """変換JSONを適用し、点群を既存レイアウト座標系(room frame, 床=0)へ。"""
-    t = json.loads((BASE / "through_transform.json").read_text())
+    t = json.loads(_find("through_transform.json").read_text())
     v, c = load_points(glb)
     v, fz, ch = normalize_floor(v)              # 1F床=0
     out = v.copy()
@@ -71,7 +77,7 @@ def main():
     glb, f1, f2, prefix, title = sys.argv[1:6]
     d1 = json.loads(Path(f1).read_text())
     d2 = json.loads(Path(f2).read_text())
-    outdir = BASE / "output" / prefix.split("/")[0]
+    outdir = Path.cwd() / "output" / prefix.split("/")[0]
     outdir.mkdir(parents=True, exist_ok=True)
 
     # 階段整合チェック

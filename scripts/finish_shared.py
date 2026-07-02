@@ -21,9 +21,15 @@ import generate_floorplan as GF
 BASE = Path(__file__).parent
 
 
+def _find(name):
+    """設定JSONを カレント(=物件プロジェクトフォルダ) → scripts/ の順で探す。"""
+    p = Path.cwd() / name
+    return p if p.exists() else BASE / name
+
+
 def cloud_new_frame(glb):
     """点群を、トレースと同じ新フレーム(回転+原点シフト)へ載せる。"""
-    t = json.loads((BASE / "shared_frame.json").read_text())
+    t = json.loads(_find("shared_frame.json").read_text())
     v, c = registered_cloud(glb)
     v[:, :2] = rotate_xy(v[:, :2], np.array(t["center"]), t["yaw"])
     v[:, 0] += t["ox"]; v[:, 1] += t["oy"]
@@ -59,17 +65,29 @@ def make_plan(traced_path, out_path):
         rooms.append(rr)
     bw = round(max(r["x"] + r["w"] for r in rooms), 2)
     bh = round(max(r["y"] + r["h"] for r in rooms), 2)
+    # 開口(detect_openings.py由来)も同じ正規化でシフト
+    openings = []
+    for op in d.get("openings", []):
+        oo = dict(op)
+        if op["ori"] == "h":
+            oo["c"] = round(op["c"] - oy, 2)
+            oo["a0"] = round(op["a0"] - ox, 2); oo["a1"] = round(op["a1"] - ox, 2)
+        else:
+            oo["c"] = round(op["c"] - ox, 2)
+            oo["a0"] = round(op["a0"] - oy, 2); oo["a1"] = round(op["a1"] - oy, 2)
+        openings.append(oo)
     data = {"title": d["title"], "bldg_w": bw, "bldg_h": bh,
-            "x_dims": derive_dims(rooms, "x"), "y_dims": derive_dims(rooms, "y"), "rooms": rooms}
+            "x_dims": derive_dims(rooms, "x"), "y_dims": derive_dims(rooms, "y"),
+            "rooms": rooms, "openings": openings}
     GF.render(data, out_path)
-    print("  保存:", out_path, f"({len(rooms)}室 {bw}×{bh}m)")
+    print("  保存:", out_path, f"({len(rooms)}室 {bw}×{bh}m 開口{len(openings)})")
 
 
 def main():
     glb, f1, f2, prefix, title = sys.argv[1:6]
     d1 = json.loads(Path(f1).read_text())
     d2 = json.loads(Path(f2).read_text())
-    outdir = BASE / "output" / prefix.split("/")[0]
+    outdir = Path.cwd() / "output" / prefix.split("/")[0]
     outdir.mkdir(parents=True, exist_ok=True)
 
     # 階段整合チェック

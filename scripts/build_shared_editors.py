@@ -29,7 +29,8 @@ import matplotlib.pyplot as plt
 from finish_through import registered_cloud
 
 BASE = Path(__file__).parent
-MID = BASE / "intermediate"
+WORK = Path.cwd()                 # 物件プロジェクトフォルダで実行する想定(従来どおりscripts/直下でも可)
+MID = WORK / "intermediate"
 MID.mkdir(exist_ok=True)
 
 
@@ -110,7 +111,7 @@ def main():
     bw, bh = round(x1 - x0, 2), round(y1 - y0, 2)
     print(f"共有座標系: {bw}×{bh}m  原点シフト ox={ox:.2f} oy={oy:.2f}")
     # 仕上げ(finish_shared)が点群を同じ新フレームへ載せるための変換を保存
-    (BASE / "shared_frame.json").write_text(json.dumps(
+    (WORK / "shared_frame.json").write_text(json.dumps(
         {"yaw": yaw, "center": [float(center[0]), float(center[1])],
          "ox": float(ox), "oy": float(oy), "bw": bw, "bh": bh}, ensure_ascii=False, indent=2))
 
@@ -136,20 +137,20 @@ def main():
         rr["x"] = round(rc[0] - r["w"] / 2.0 + ox, 2)
         rr["y"] = round(rc[1] - r["h"] / 2.0 + oy, 2)
         rooms1_shift.append(rr)
-    j1 = BASE / "ogimachi_shared_1f_rooms.json"
+    j1 = WORK / "ogimachi_shared_1f_rooms.json"
     j1.write_text(json.dumps({"title": "扇町2号 1F 平面図(通し)", "bldg_w": bw, "bldg_h": bh,
                               "x_dims": [0, bw], "y_dims": [0, bh], "rooms": rooms1_shift},
                              ensure_ascii=False, indent=2))
     # 2Fは空(これからトレース)
-    j2 = BASE / "ogimachi_shared_2f_rooms.json"
+    j2 = WORK / "ogimachi_shared_2f_rooms.json"
     j2.write_text(json.dumps({"title": "扇町2号 2F 平面図(通し)", "bldg_w": bw, "bldg_h": bh,
                               "x_dims": [0, bw], "y_dims": [0, bh], "rooms": []},
                              ensure_ascii=False, indent=2))
 
     for name, b in [("1f", b1), ("2f", b2)]:
-        subprocess.run(["python3", "build_editor.py",
-                        f"ogimachi_shared_{name}_rooms.json", str(b.relative_to(BASE)),
-                        f"editor_shared_{name}.html"], cwd=BASE, check=True)
+        subprocess.run(["python3", str(BASE / "build_editor.py"),
+                        f"ogimachi_shared_{name}_rooms.json", str(b.relative_to(WORK)),
+                        f"editor_shared_{name}.html"], cwd=WORK, check=True)
     print("完了: editor_shared_1f.html / editor_shared_2f.html")
     print(f"  通し柱の基準: 1F/2Fとも同一座標系(原点シフト後)。床の間/押入の仕切り直上に2F南壁が来るか要確認")
 

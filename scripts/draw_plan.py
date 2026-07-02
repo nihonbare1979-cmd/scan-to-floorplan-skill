@@ -140,7 +140,61 @@ def draw_plan(rooms, bldg_w, bldg_h, title, out_path,
         d.text((cx, cy + 10), f"{area:.1f}㎡ / {area / tatami_m2:.1f}畳",
                font=fonts["area"], fill=(90, 80, 65), anchor="mm")
 
-    # ── 開口部マーカー(壁を切り欠いて開口記号を描く) ──
+    # ── 開口部(点群実測・detect_openings.py形式のdict) ──
+    #    戸=壁を切り欠き+茶線 / 窓=壁を切り欠き+青二重線。位置・幅は実測値。
+    #    描かれている壁線上の開口のみ記号化(同名続き間の内側=壁なしには描かない)
+    measured = [op for op in (openings or []) if isinstance(op, dict)]
+    openings = [op for op in (openings or []) if not isinstance(op, dict)] or None
+    if measured:
+        wall_segs = [("v", 0.0, 0.0, bldg_h), ("v", bldg_w, 0.0, bldg_h),
+                     ("h", 0.0, 0.0, bldg_w), ("h", bldg_h, 0.0, bldg_w)]
+        for g in groups:
+            rects = [(x, y, w, h) for (_n, x, y, w, h, _c) in g]
+            wall_segs += _union_edges(rects)
+
+        def on_wall(op):
+            for orient, fixed, a, b in wall_segs:
+                if orient != op["ori"]:
+                    continue
+                if abs(fixed - op["c"]) < 0.08:
+                    ov = min(b, op["a1"]) - max(a, op["a0"])
+                    if ov > 0.5 * (op["a1"] - op["a0"]):
+                        return True
+            return False
+        measured = [op for op in measured if on_wall(op)]
+    if measured:
+        DOOR_C, WIN_C = (150, 90, 40), (30, 110, 180)
+        for op in measured:
+            a0, a1, c = op["a0"], op["a1"], op["c"]
+            if op["ori"] == "h":     # 水平壁(x方向) c=y
+                p0, p1, pc = px(a0), px(a1), py(c)
+                d.line([p0, pc, p1, pc], fill=BG, width=8)          # 壁を切り欠く
+                if op["kind"] == "窓":
+                    for off in (-3, 3):
+                        d.line([p0, pc + off, p1, pc + off], fill=WIN_C, width=2)
+                else:
+                    d.line([p0, pc, p1, pc], fill=DOOR_C, width=2)
+                    for jx in (p0, p1):                              # 方立ての小口
+                        d.line([jx, pc - 5, jx, pc + 5], fill=DOOR_C, width=2)
+            else:                    # 垂直壁(y方向) c=x
+                p0, p1, pc = py(a0), py(a1), px(c)
+                d.line([pc, p0, pc, p1], fill=BG, width=8)
+                if op["kind"] == "窓":
+                    for off in (-3, 3):
+                        d.line([pc + off, p0, pc + off, p1], fill=WIN_C, width=2)
+                else:
+                    d.line([pc, p0, pc, p1], fill=DOOR_C, width=2)
+                    for jy in (p0, p1):
+                        d.line([pc - 5, jy, pc + 5, jy], fill=DOOR_C, width=2)
+        # 凡例
+        lx, ly = MARGIN_L + 170, H - MARGIN_B + 56
+        d.line([lx, ly, lx + 26, ly], fill=DOOR_C, width=3)
+        d.text((lx + 32, ly), "戸・掃き出し(実測)", font=fonts["sub"], fill=(90, 80, 65), anchor="lm")
+        for off in (-2, 2):
+            d.line([lx + 190, ly + off, lx + 216, ly + off], fill=WIN_C, width=2)
+        d.text((lx + 222, ly), "窓(実測)", font=fonts["sub"], fill=(90, 80, 65), anchor="lm")
+
+    # ── 開口部マーカー(旧形式タプル・壁を切り欠いて開口記号を描く) ──
     if openings:
         OPEN_W = int(0.7 * SCALE)  # 開口の見かけ幅 ≒700mm
         colmap = {"door": (200, 90, 40), "sliding": (60, 120, 190),

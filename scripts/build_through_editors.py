@@ -14,9 +14,9 @@
     yaw_deg  : 水平回転(度)
     flip_lr  : true で東西反転
 
-出力:
+出力(カレント=物件プロジェクトフォルダ):
   intermediate/through_1f_bg.png/.b64 , through_2f_bg.png/.b64
-  ogimachi_through_1f_rooms.json / _2f_rooms.json  (空・共有bldg寸法)
+  through_1f_rooms.json / through_2f_rooms.json  (空・共有bldg寸法)
   editor_through_1f.html / editor_through_2f.html
 """
 import base64
@@ -34,7 +34,8 @@ from PIL import Image as PilImage
 from load_glb import load_points
 
 BASE = Path(__file__).parent
-MID = BASE / "intermediate"
+WORK = Path.cwd()                 # 物件プロジェクトフォルダで実行する想定
+MID = WORK / "intermediate"
 MID.mkdir(exist_ok=True)
 
 
@@ -121,22 +122,23 @@ def main():
         print(f"下敷き生成: {out_png.name}  ({mask.sum()}点)")
 
     # 共有bldg寸法の空JSON(原点0,0・幅bw・高bh)。座標系が共有=通し柱直接判定可
+    title_base = WORK.name if WORK.name not in ("scripts",) else "物件"
     for name in ("1f", "2f"):
-        p = BASE / f"ogimachi_through_{name}_rooms.json"
+        p = WORK / f"through_{name}_rooms.json"
         if p.exists():
             print(f"既存 {p.name} を保持")
             continue
-        data = {"title": f"扇町2号 {name.upper()} 平面図",
+        data = {"title": f"{title_base} {name.upper()} 平面図",
                 "bldg_w": round(bw, 2), "bldg_h": round(bh, 2),
                 "x_dims": [0, round(bw, 2)], "y_dims": [0, round(bh, 2)], "rooms": []}
         p.write_text(json.dumps(data, ensure_ascii=False, indent=2))
 
     for name in ("1f", "2f"):
         out_html = f"editor_through_{name}.html"
-        subprocess.run(["python3", "build_editor.py",
-                        f"ogimachi_through_{name}_rooms.json",
-                        str(results[name].relative_to(BASE)), out_html],
-                       cwd=BASE, check=True)
+        subprocess.run(["python3", str(BASE / "build_editor.py"),
+                        f"through_{name}_rooms.json",
+                        str(results[name].relative_to(WORK)), out_html],
+                       cwd=WORK, check=True)
     print("\n完了: editor_through_1f.html / editor_through_2f.html をChromeで開いてトレース")
 
 

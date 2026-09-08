@@ -245,7 +245,7 @@ def draw_plan(rooms, bldg_w, bldg_h, title, out_path,
         for o in outlets:
             st = o.get("status", "現状")
             col = next((v for k, v in OC.items() if st.startswith(k)), (0, 140, 0))
-            off = {"N": (0, 1), "S": (0, -1), "E": (-1, 0), "W": (1, 0)}.get(o.get("dir", ""), (0, 0))
+            off = {"N": (0, -1), "S": (0, 1), "E": (1, 0), "W": (-1, 0)}.get(o.get("dir", ""), (0, 0))  # 壁→部屋の向き(画像y下向き)
             cx, cy = px(o["x"]) + off[0] * 7, py(o["y"]) + off[1] * 7
             d.rectangle([cx - 5, cy - 5, cx + 5, cy + 5], fill=col, outline=(255, 255, 255))
             if st == "撤去":

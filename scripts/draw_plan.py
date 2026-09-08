@@ -91,14 +91,18 @@ def _union_edges(rects):
 
 def draw_plan(rooms, bldg_w, bldg_h, title, out_path,
               x_dims_top=None, y_dims_left=None, note="", openings=None,
-              tatami_m2=1.62):
-    """rooms: [(name, x, y, w, h, color), ...] 単位m
-    openings: [(x, y, kind), ...] 開口部マーカー(任意)。kind: door/sliding/window
+              tatami_m2=1.62, outlets=None, appliances=None):
+    """rooms: [(name, x, y, w, h, color[, role]), ...] 単位m。roleは用途(改装計画用・任意)
+    openings: 実測/手動の開口dict(kind: 戸/窓/壁撤去/壁新設) または旧形式タプル
+    outlets: [{x,y,status,ports,dir}, ...] コンセント(改装計画用・任意)
+    appliances: [{kind,label,x,y,w,h}, ...] 家電・家具(改装計画用・任意)
     """
     SCALE = 95
     MARGIN_L, MARGIN_T, MARGIN_R, MARGIN_B = 95, 130, 50, 90
     BG, WALL, DIMC = (250, 249, 245), (40, 40, 40), (110, 110, 110)
     fonts = load_fonts()
+    roles = {(r[1], r[2]): r[6] for r in rooms if len(r) > 6 and r[6]}
+    rooms = [tuple(r[:6]) for r in rooms]
 
     W = int(bldg_w * SCALE) + MARGIN_L + MARGIN_R
     H = int(bldg_h * SCALE) + MARGIN_T + MARGIN_B
@@ -107,6 +111,16 @@ def draw_plan(rooms, bldg_w, bldg_h, title, out_path,
 
     def px(m): return int(MARGIN_L + m * SCALE)
     def py(m): return int(MARGIN_T + m * SCALE)
+
+    def dashed(p0, p1, fill, width=2, dash=9, gap=6):
+        x0, y0, x1, y1 = *p0, *p1
+        L = max(((x1 - x0) ** 2 + (y1 - y0) ** 2) ** 0.5, 1)
+        ux, uy = (x1 - x0) / L, (y1 - y0) / L
+        t = 0
+        while t < L:
+            e = min(t + dash, L)
+            d.line([x0 + ux * t, y0 + uy * t, x0 + ux * e, y0 + uy * e], fill=fill, width=width)
+            t += dash + gap
 
     d.rectangle([0, 0, W, 54], fill=(55, 45, 30))
     d.text((24, 12), title, font=fonts["title"], fill=(255, 248, 235))
@@ -136,9 +150,17 @@ def draw_plan(rooms, bldg_w, bldg_h, title, out_path,
         bx, by, bw_, bh_ = max(((x, y, w, h) for (_n, x, y, w, h, _c) in g),
                                key=lambda r: r[2] * r[3])
         cx, cy = px(bx + bw_ / 2), py(by + bh_ / 2)
-        d.text((cx, cy - 11), name, font=fonts["room"], fill=(45, 35, 25), anchor="mm")
-        d.text((cx, cy + 10), f"{area:.1f}㎡ / {area / tatami_m2:.1f}畳",
-               font=fonts["area"], fill=(90, 80, 65), anchor="mm")
+        role = next((roles[(x, y)] for (_n, x, y, w, h, _c) in g if (x, y) in roles), "")
+        if role and role != name:
+            rf = fonts["room"] if len(role) <= 7 else fonts["area"]
+            d.text((cx, cy - 22), name, font=fonts["area"], fill=(90, 80, 65), anchor="mm")
+            d.text((cx, cy - 2), role, font=rf, fill=(190, 30, 30), anchor="mm")
+            d.text((cx, cy + 18), f"{area:.1f}㎡ / {area / tatami_m2:.1f}畳",
+                   font=fonts["area"], fill=(90, 80, 65), anchor="mm")
+        else:
+            d.text((cx, cy - 11), name, font=fonts["room"], fill=(45, 35, 25), anchor="mm")
+            d.text((cx, cy + 10), f"{area:.1f}㎡ / {area / tatami_m2:.1f}畳",
+                   font=fonts["area"], fill=(90, 80, 65), anchor="mm")
 
     # ── 開口部(点群実測・detect_openings.py形式のdict) ──
     #    戸=壁を切り欠き+茶線 / 窓=壁を切り欠き+青二重線。位置・幅は実測値。
@@ -153,6 +175,8 @@ def draw_plan(rooms, bldg_w, bldg_h, title, out_path,
             wall_segs += _union_edges(rects)
 
         def on_wall(op):
+            if op.get("kind") == "壁新設":      # 新設壁は既存壁上でなくてよい
+                return True
             for orient, fixed, a, b in wall_segs:
                 if orient != op["ori"]:
                     continue
@@ -163,9 +187,18 @@ def draw_plan(rooms, bldg_w, bldg_h, title, out_path,
             return False
         measured = [op for op in measured if on_wall(op)]
     if measured:
-        DOOR_C, WIN_C = (150, 90, 40), (30, 110, 180)
+        DOOR_C, WIN_C, RM_C = (150, 90, 40), (30, 110, 180), (215, 40, 40)
         for op in measured:
             a0, a1, c = op["a0"], op["a1"], op["c"]
+            if op["kind"] in ("壁撤去", "壁新設"):
+                pts = ([px(a0), py(c), px(a1), py(c)] if op["ori"] == "h"
+                       else [px(c), py(a0), px(c), py(a1)])
+                if op["kind"] == "壁撤去":
+                    d.line(pts, fill=BG, width=8)                          # 壁を消す
+                    dashed(pts[:2], pts[2:], fill=RM_C, width=3)            # 赤点線=撤去
+                else:
+                    d.line(pts, fill=WALL, width=6)                         # 太線=新設
+                continue
             if op["ori"] == "h":     # 水平壁(x方向) c=y
                 p0, p1, pc = px(a0), px(a1), py(c)
                 d.line([p0, pc, p1, pc], fill=BG, width=8)          # 壁を切り欠く
@@ -186,13 +219,48 @@ def draw_plan(rooms, bldg_w, bldg_h, title, out_path,
                     d.line([pc, p0, pc, p1], fill=DOOR_C, width=2)
                     for jy in (p0, p1):
                         d.line([pc - 5, jy, pc + 5, jy], fill=DOOR_C, width=2)
-        # 凡例
+        # 凡例(戸・窓がある時だけ)
         lx, ly = MARGIN_L + 170, H - MARGIN_B + 56
-        d.line([lx, ly, lx + 26, ly], fill=DOOR_C, width=3)
-        d.text((lx + 32, ly), "戸・掃き出し(実測)", font=fonts["sub"], fill=(90, 80, 65), anchor="lm")
-        for off in (-2, 2):
-            d.line([lx + 190, ly + off, lx + 216, ly + off], fill=WIN_C, width=2)
-        d.text((lx + 222, ly), "窓(実測)", font=fonts["sub"], fill=(90, 80, 65), anchor="lm")
+        if any(op["kind"] in ("戸", "窓") for op in measured):
+            d.line([lx, ly, lx + 26, ly], fill=DOOR_C, width=3)
+            d.text((lx + 32, ly), "戸・掃き出し(実測)", font=fonts["sub"], fill=(90, 80, 65), anchor="lm")
+            for off in (-2, 2):
+                d.line([lx + 190, ly + off, lx + 216, ly + off], fill=WIN_C, width=2)
+            d.text((lx + 222, ly), "窓(実測)", font=fonts["sub"], fill=(90, 80, 65), anchor="lm")
+
+    # ── 家電・家具(改装計画用): 点線枠+ラベル ──
+    for a in (appliances or []):
+        x0, y0, x1, y1 = px(a["x"]), py(a["y"]), px(a["x"] + a["w"]), py(a["y"] + a["h"])
+        col = (120, 100, 70)
+        for p0, p1 in [((x0, y0), (x1, y0)), ((x1, y0), (x1, y1)), ((x1, y1), (x0, y1)), ((x0, y1), (x0, y0))]:
+            dashed(p0, p1, fill=col, width=1, dash=5, gap=4)
+        lab = a.get("label") or a.get("kind", "")
+        if lab and a["w"] * a["h"] >= 0.12:
+            d.text(((x0 + x1) // 2, (y0 + y1) // 2), lab[:10], font=fonts["dim"], fill=col, anchor="mm")
+
+    # ── コンセント(改装計画用): ■=状態色 + 口数。dirで取り付け側の部屋内へ少しずらす ──
+    if outlets:
+        OC = {"現状": (30, 30, 30), "計画◎": (211, 47, 47), "計画○": (239, 143, 0),
+              "計画△": (140, 140, 140), "撤去": (170, 170, 170)}
+        for o in outlets:
+            st = o.get("status", "現状")
+            col = next((v for k, v in OC.items() if st.startswith(k)), (0, 140, 0))
+            off = {"N": (0, 1), "S": (0, -1), "E": (-1, 0), "W": (1, 0)}.get(o.get("dir", ""), (0, 0))
+            cx, cy = px(o["x"]) + off[0] * 7, py(o["y"]) + off[1] * 7
+            d.rectangle([cx - 5, cy - 5, cx + 5, cy + 5], fill=col, outline=(255, 255, 255))
+            if st == "撤去":
+                d.line([cx - 7, cy - 7, cx + 7, cy + 7], fill=(211, 47, 47), width=2)
+                d.line([cx + 7, cy - 7, cx - 7, cy + 7], fill=(211, 47, 47), width=2)
+            else:
+                d.text((cx + off[0] * 9, cy + off[1] * 9 - (0 if off[1] else 12)),
+                       f"{o.get('ports', 2)}口", font=fonts["dim"], fill=col, anchor="mm")
+        lx, ly = MARGIN_L, H - MARGIN_B + 76
+        for i, (k, lab) in enumerate([("現状", "現状"), ("計画◎", "計画◎必須"), ("計画○", "○推奨"),
+                                       ("計画△", "△あれば"), ("撤去", "撤去")]):
+            x = lx + i * 118
+            d.rectangle([x, ly - 5, x + 10, ly + 5], fill=OC[k])
+            d.text((x + 16, ly), lab, font=fonts["sub"], fill=(90, 80, 65), anchor="lm")
+        d.text((lx + 5 * 118, ly), "■=コンセント", font=fonts["sub"], fill=(90, 80, 65), anchor="lm")
 
     # ── 開口部マーカー(旧形式タプル・壁を切り欠いて開口記号を描く) ──
     if openings:

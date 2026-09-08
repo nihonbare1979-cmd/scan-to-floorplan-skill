@@ -142,6 +142,24 @@ python3 make_gallery.py <出力フォルダ> index.html "<タイトル>"
 
 ---
 
+
+### H. 改装計画（リフォーム後の間取り）を作る — 現状図を汚さない運用（2026-09-08確立・扇町で実証）
+現状の実測rooms.jsonは「事実」なので上書きしない。計画は物件フォルダ内 `renovation/` に**2系統**で分離する(2026-09-08社長指示):
+- `current_<階>_rooms.json` = **現況図(注記入り)**: 今の壁割りのまま、撤去予定壁(kind=壁撤去・赤点線)・コンセント・用途(role)を注記。壁は動かさない
+- `after_<階>_rooms.json` = **リフォーム後計画**: currentのコピーから出発し壁を実際に動かす。撤去ガイドの点線は壁を消したら削除
+```bash
+cd projects/<物件>
+mkdir -p renovation && cp <物件>_shared_1f_rooms.json renovation/current_1f_rooms.json   # titleを「現況図」に。after_1fはcurrentのコピー(title「リフォーム後計画」)
+cd renovation
+python3 ../../../build_editor.py current_1f_rooms.json ../intermediate/shared_1f_bg.b64 editor_current_1f.html   # after/2Fも同様
+python3 ../../../serve_editor.py . 8793     # 💾保存は renovation/ の各JSONへ直書き(現状JSONは無傷)
+```
+- 下敷きは現状の点群のまま＝「今の壁がどこか」を見ながら計画できる
+- 使い方: 部屋を選ぶ→辺■ハンドルで壁を動かす(壁連動ON)→「部屋名」「役割」欄で用途名(寝室A/リビング等)→💾
+- 清書: `finish_shared.make_plan(<json>, <out.jpg>)` で `current_*`/`after_*` とも一発(2026-09-09対応済み)。draw_plan が `role`(赤字の用途・8文字以上は小さく)・`outlets`(■状態色+口数・撤去は×)・`appliances`(点線枠・0.12㎡未満はラベル省略)・`openings` の `壁撤去`(壁を消して赤点線)/`壁新設`(太線)を描く。同名の隣接矩形は1室(L字)に統合されるので「押入をLDKに取り込む」は押入の name を LDK にすればよい
+- 改装で壁を動かしたら、旧壁上のコンセントは status=撤去 にし、新壁に「既存配線を流用」の計画◎を置く(旧位置に×・新位置に■が並んで移設が読める)
+- 配信は作業ディレクトリ側 `.claude/launch.json` に serve_editor の設定を置き `preview_start`（例: name=ogimachi-plan-editor, port 8793）
+
 ## スクリプト一覧
 (データの読み書きは「カレント=物件フォルダ→scripts/」の順で解決。物件フォルダから実行する)
 - `run_pipeline.py` ★ワンコマンド準備(変換→品質診断→姿勢診断→立面先出し→エディタ→台帳)
@@ -152,7 +170,7 @@ python3 make_gallery.py <出力フォルダ> index.html "<タイトル>"
 - `extract_elevation.py` 床検出(Z=0化)・立面投影
 - `build_through_editors.py` 生スキャンから1F/2F共有extent下敷き+エディタ(新規物件)
 - `build_shared_editors.py` 既存1Fを基準に共有座標系下敷き+エディタ(色分け/1F目印/傾き補正/`shared_frame.json`保存)
-- `build_editor.py` エディタHTML本体(種別に**出窓**含む。開口の手動追加・移動・戸⇄窓・回転・削除に対応)。`build_property_editor.py`は別撮り用
+- `build_editor.py` エディタHTML本体(種別に**出窓**含む。開口の手動追加・移動・戸⇄窓・回転・削除に対応)。 **壁連動ボタン(2026-09-08追加)**: 辺ハンドルのドラッグ時、同じ線上で区間が重なる向かいの部屋の辺も追従＝壁の移動。壁1本だけ動かす時はOFF。 **コンセント配置(2026-09-08追加)**: 「＋コンセント」で追加→ドラッグで最寄りの壁に吸着(0.15m)。属性=状態(現状/計画◎○△/撤去)・口数・高さcm・専用回路・USB・アース・用途メモ・部屋名。保存JSONの `outlets` キーに入る(rooms/openingsと同居・既存スクリプトは無視して安全)。清書図に載せる場合は draw側で `outlets` を読む。 **役割(用途)欄(2026-09-08追加)**: 部屋名とは別に `role`(寝室A/リビング等・候補リスト付き自由入力)を持ち、図面に赤太字表示。設備計画(コンセント等)はこの `role` を基準にする。 **コンセントの取り付け側(2026-09-08追加)**: 共有壁では `dir`(N/S/E/W=壁から部屋へ入る向き)と `room`(取り付け側の部屋)を持つ。壁に置くと候補から選択/向き反転⇄。 **壁撤去/新設(2026-09-08追加)**: `openings` の kind に `壁撤去`(赤点線・壁を消す)/`壁新設`(太黒)を追加。端■で長さ調整可＝一部撤去も表現。清書側(draw_plan等)は kind を見て描き分けること(戸/窓以外を戸扱いしない)。 **家電/家具配置＋階段下(2026-09-08追加)**: `appliances`(kind/x/y/w/h/watt/ded/room。APPテーブルに標準寸法・消費電力・専用回路要否)。種別に`階段下`(点線枠・階段に重ねる)。コンセント計画は appliances と rooms.role を入力にする。`build_property_editor.py`は別撮り用
 - `snap_cross_floor.py` 1F/2F階間スナップ(共通壁線へ吸着)
 - `snap_rooms.py` 単一フロア内スナップ
 - `register_through.py` 点群をトレース済み1F座標系へ剛体登録(FFT相互相関・flip+並進)

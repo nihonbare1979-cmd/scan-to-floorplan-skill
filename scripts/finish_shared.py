@@ -76,9 +76,12 @@ def make_plan(traced_path, out_path):
             oo["c"] = round(op["c"] - ox, 2)
             oo["a0"] = round(op["a0"] - oy, 2); oo["a1"] = round(op["a1"] - oy, 2)
         openings.append(oo)
+    outlets = [{**o, "x": round(o["x"] - ox, 2), "y": round(o["y"] - oy, 2)} for o in d.get("outlets", [])]
+    apps = [{**a, "x": round(a["x"] - ox, 2), "y": round(a["y"] - oy, 2)} for a in d.get("appliances", [])]
     data = {"title": d["title"], "bldg_w": bw, "bldg_h": bh,
             "x_dims": derive_dims(rooms, "x"), "y_dims": derive_dims(rooms, "y"),
-            "rooms": rooms, "openings": openings}
+            "rooms": rooms, "openings": openings, "outlets": outlets, "appliances": apps,
+            "note": d.get("note", "3Dスキャン実測ベース")}
     GF.render(data, out_path)
     print("  保存:", out_path, f"({len(rooms)}室 {bw}×{bh}m 開口{len(openings)})")
 

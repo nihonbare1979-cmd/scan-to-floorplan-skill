@@ -34,12 +34,13 @@ def _color(r):
 
 
 def render(data, out_path):
-    rooms = [(r["name"], r["x"], r["y"], r["w"], r["h"], _color(r)) for r in data["rooms"]]
+    rooms = [(r["name"], r["x"], r["y"], r["w"], r["h"], _color(r), r.get("role", "")) for r in data["rooms"]]
     draw_plan(rooms, data["bldg_w"], data["bldg_h"],
               data.get("title", "平面図") + "（寸法=実測）", out_path,
               x_dims_top=data.get("x_dims"), y_dims_left=data.get("y_dims"),
-              openings=data.get("openings"),
-              note="3Dスキャン実測ベース")
+              openings=data.get("openings"), outlets=data.get("outlets"),
+              appliances=data.get("appliances"),
+              note=data.get("note", "3Dスキャン実測ベース"))
 
 
 if __name__ == "__main__":

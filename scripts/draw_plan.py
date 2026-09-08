@@ -252,8 +252,9 @@ def draw_plan(rooms, bldg_w, bldg_h, title, out_path,
                 d.line([cx - 7, cy - 7, cx + 7, cy + 7], fill=(211, 47, 47), width=2)
                 d.line([cx + 7, cy - 7, cx - 7, cy + 7], fill=(211, 47, 47), width=2)
             else:
-                d.text((cx + off[0] * 9, cy + off[1] * 9 - (0 if off[1] else 12)),
-                       f"{o.get('ports', 2)}口", font=fonts["dim"], fill=col, anchor="mm")
+                lab = str(o["id"]) if o.get("id") else f"{o.get('ports', 2)}口"
+                d.text((cx + off[0] * 11, cy + off[1] * 11 - (0 if off[1] else 12)),
+                       lab, font=fonts["dim"], fill=col, anchor="mm")
         lx, ly = MARGIN_L, H - MARGIN_B + 76
         for i, (k, lab) in enumerate([("現状", "現状"), ("計画◎", "計画◎必須"), ("計画○", "○推奨"),
                                        ("計画△", "△あれば"), ("撤去", "撤去")]):

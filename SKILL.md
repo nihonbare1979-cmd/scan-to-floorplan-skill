@@ -157,6 +157,7 @@ python3 ../../../serve_editor.py . 8793     # 💾保存は renovation/ の各JS
 - 下敷きは現状の点群のまま＝「今の壁がどこか」を見ながら計画できる
 - 使い方: 部屋を選ぶ→辺■ハンドルで壁を動かす(壁連動ON)→「部屋名」「役割」欄で用途名(寝室A/リビング等)→💾
 - 清書: `finish_shared.make_plan(<json>, <out.jpg>)` で `current_*`/`after_*` とも一発(2026-09-09対応済み)。draw_plan が `role`(赤字の用途・8文字以上は小さく)・`outlets`(■状態色+口数・撤去は×)・`appliances`(点線枠・0.12㎡未満はラベル省略)・`openings` の `壁撤去`(壁を消して赤点線)/`壁新設`(太線)を描く。同名の隣接矩形は1室(L字)に統合されるので「押入をLDKに取り込む」は押入の name を LDK にすればよい
+- **コンセント設計図**: outlets に `id`(図面番号・階ごと01〜)を付けると清書の■脇に番号が出る(無ければ口数)。`volt`(100/200)・`dedicated`・`earth`・`usb`・`note` を持たせ、JSONから一覧表(md)を生成して図と表を番号で対にする(扇町 `outlet_design.md` が雛形)。家電(appliances)の位置＝コンセント位置の根拠にする
 - 改装で壁を動かしたら、旧壁上のコンセントは status=撤去 にし、新壁に「既存配線を流用」の計画◎を置く(旧位置に×・新位置に■が並んで移設が読める)
 - 配信は作業ディレクトリ側 `.claude/launch.json` に serve_editor の設定を置き `preview_start`（例: name=ogimachi-plan-editor, port 8793）
 
